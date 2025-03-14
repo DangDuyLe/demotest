@@ -18,7 +18,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import dynamic from 'next/dynamic';
 
 // Optimize chart loading with proper SSR handling and caching
-const Chart = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), {
+const Chart = dynamic(() => import('recharts').then(mod => {
+  const Component = mod.ResponsiveContainer;
+  Component.displayName = "Chart";
+  return Component;
+}), {
   ssr: false,
   loading: () => (
     <div className="h-[350px] flex items-center justify-center bg-gradient-to-b from-gray-900/50 to-gray-800/50 rounded-xl backdrop-blur-sm">
@@ -45,6 +49,7 @@ const LoadingState = memo(({ coinName }: { coinName?: string }) => (
     <p className="text-gray-400 font-medium">Loading {coinName || 'Loading...'} data...</p>
   </div>
 ));
+LoadingState.displayName = "LoadingState";
 
 const ErrorState = memo(({ error, onRetry }: { error: string; onRetry: () => void }) => (
   <div className="flex flex-col items-center justify-center h-[400px] space-y-4 bg-gradient-to-b from-red-900/20 to-gray-800/50 rounded-xl backdrop-blur-sm">
@@ -66,12 +71,13 @@ const ErrorState = memo(({ error, onRetry }: { error: string; onRetry: () => voi
     </Button>
   </div>
 ));
+ErrorState.displayName = "ErrorState";
 
 interface RevenueGraphProps {
   onCoinChange: (coin: CoinOption | null) => void;
 }
 
-export default function RevenueGraph({ onCoinChange }: RevenueGraphProps) {
+const RevenueGraph: React.FC<RevenueGraphProps> = ({ onCoinChange }) => {
   const [data, setData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -353,4 +359,7 @@ export default function RevenueGraph({ onCoinChange }: RevenueGraphProps) {
       </AnimatePresence>
     </div>
   );
-} 
+};
+RevenueGraph.displayName = "RevenueGraph";
+
+export default RevenueGraph; 
