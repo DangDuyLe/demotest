@@ -18,11 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import dynamic from 'next/dynamic';
 
 // Optimize chart loading with proper SSR handling and caching
-const Chart = dynamic(() => import('recharts').then(mod => {
-  const Component = mod.ResponsiveContainer;
-  Component.displayName = "Chart";
-  return Component;
-}), {
+const Chart = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), {
   ssr: false,
   loading: () => (
     <div className="h-[350px] flex items-center justify-center bg-gradient-to-b from-gray-900/50 to-gray-800/50 rounded-xl backdrop-blur-sm">
@@ -46,10 +42,9 @@ const LoadingState = memo(({ coinName }: { coinName?: string }) => (
     >
       <Loader2 className="h-8 w-8 text-[#F5B056]" />
     </motion.div>
-    <p className="text-gray-400 font-medium">Loading {coinName || 'Loading...'} data...</p>
+    <p className="text-gray-400 font-medium">Loading {coinName || ''} data...</p>
   </div>
 ));
-LoadingState.displayName = "LoadingState";
 
 const ErrorState = memo(({ error, onRetry }: { error: string; onRetry: () => void }) => (
   <div className="flex flex-col items-center justify-center h-[400px] space-y-4 bg-gradient-to-b from-red-900/20 to-gray-800/50 rounded-xl backdrop-blur-sm">
@@ -71,13 +66,12 @@ const ErrorState = memo(({ error, onRetry }: { error: string; onRetry: () => voi
     </Button>
   </div>
 ));
-ErrorState.displayName = "ErrorState";
 
 interface RevenueGraphProps {
   onCoinChange: (coin: CoinOption | null) => void;
 }
 
-const RevenueGraph: React.FC<RevenueGraphProps> = ({ onCoinChange }) => {
+export default function RevenueGraph({ onCoinChange }: RevenueGraphProps) {
   const [data, setData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -210,12 +204,36 @@ const RevenueGraph: React.FC<RevenueGraphProps> = ({ onCoinChange }) => {
       borderRadius: '12px',
       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
       backdropFilter: 'blur(8px)',
+    },
+    customTooltip: (props: any) => {
+      if (!props.active || !props.payload || !props.payload.length) {
+        return null;
+      }
+
+      const priceValue = props.payload.find((p: any) => p.dataKey === 'price');
+      const volumeValue = props.payload.find((p: any) => p.dataKey === 'volume');
+
+      return (
+        <div className="bg-gray-900/95 border border-gray-700/30 rounded-xl p-2 shadow-lg backdrop-blur-lg">
+          <p className="text-gray-400 mb-1">{props.label}</p>
+          {priceValue && (
+            <p className="text-[#3b82f6] font-medium">
+              Price: ${priceValue.value.toLocaleString()}
+            </p>
+          )}
+          {volumeValue && (
+            <p className="text-[#22d3ee] font-medium">
+              Volume: {volumeValue.value.toFixed(0)}M
+            </p>
+          )}
+        </div>
+      );
     }
   }), []);
 
   return (
     <div className="space-y-6">
-      <Card className="bg-gradient-to-br from-gray-900 to-gray-800/95 border-gray-800/50 rounded-2xl shadow-xl backdrop-blur-sm transition-all duration-300 hover:shadow-2xl hover:shadow-[#F5B056]/5">
+      <Card className="bg-white/5 rounded-[10px] p-4 border border-gray-800 backdrop-blur-[4px]">
         <CardHeader className="p-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -252,18 +270,18 @@ const RevenueGraph: React.FC<RevenueGraphProps> = ({ onCoinChange }) => {
                       value={coin.id}
                       className="text-gray-300 hover:bg-gray-700/50 focus:bg-gray-700/50 focus:text-white transition-colors duration-200"
                     >
-                      <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
                         <span className="text-[#F5B056]">{coin.symbol}</span>
                         <span className="text-gray-400">-</span>
                         <span>{coin.name}</span>
                       </div>
                     </SelectItem>
                   ))}
-                </div>
+            </div>
               </SelectContent>
             </Select>
-          </div>
-        </CardHeader>
+        </div>
+      </CardHeader>
         <CardContent className="p-6 pt-0">
           <AnimatePresence mode="wait">
             {loading ? (
@@ -277,12 +295,12 @@ const RevenueGraph: React.FC<RevenueGraphProps> = ({ onCoinChange }) => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.5 }}
-                className="h-[350px]"
+                className="h-[400px]"
               >
                 <Chart width="100%" height="100%">
-                  <LineChart data={data}>
+            <LineChart data={data}>
                     {chartConfig.gradients}
-                    <XAxis
+              <XAxis 
                       dataKey="date"
                       stroke="#666"
                       tickLine={false}
@@ -292,13 +310,15 @@ const RevenueGraph: React.FC<RevenueGraphProps> = ({ onCoinChange }) => {
                     />
                     <YAxis
                       yAxisId="left"
-                      stroke="#666"
+                      stroke="#666" 
                       tickLine={false}
                       axisLine={false}
                       tickFormatter={(value) => `$${value.toLocaleString()}`}
                       tick={{ fill: '#9ca3af' }}
+                      width={80}
+                      padding={{ top: 0 }}
                     />
-                    <YAxis
+                    <YAxis 
                       yAxisId="right"
                       orientation="right"
                       stroke="#666"
@@ -306,43 +326,40 @@ const RevenueGraph: React.FC<RevenueGraphProps> = ({ onCoinChange }) => {
                       axisLine={false}
                       tickFormatter={(value) => `${value.toFixed(0)}M`}
                       tick={{ fill: '#9ca3af' }}
+                      width={70}
+                      padding={{ top: 20 }}
                     />
-                    <Tooltip 
-                      contentStyle={chartConfig.tooltipStyle}
-                      formatter={(value: number, name: string) => [
-                        name === 'price' ? `$${value.toLocaleString()}` : `${value.toFixed(0)}M`,
-                        name === 'price' ? 'Price' : 'Volume'
-                      ]}
-                      labelStyle={{ color: '#9ca3af' }}
-                      itemStyle={{ color: '#fff', fontWeight: 500 }}
-                    />
-                    <Line
+              <Tooltip 
+                content={chartConfig.customTooltip}
+                cursor={{ stroke: '#666', strokeWidth: 1 }}
+              />
+              <Line
                       yAxisId="left"
-                      type="monotone"
+                type="monotone"
                       dataKey="price"
-                      stroke="#3b82f6"
-                      strokeWidth={2}
+                stroke="#3b82f6"
+                strokeWidth={2}
                       dot={false}
                       activeDot={{ r: 8, strokeWidth: 2 }}
                       name="price"
-                    />
-                    <Line
+              />
+              <Line
                       yAxisId="right"
-                      type="monotone"
+                type="monotone"
                       dataKey="volume"
-                      stroke="#22d3ee"
-                      strokeWidth={2}
+                stroke="#22d3ee"
+                strokeWidth={2}
                       dot={false}
                       activeDot={{ r: 8, strokeWidth: 2 }}
                       name="volume"
-                    />
-                  </LineChart>
+              />
+            </LineChart>
                 </Chart>
               </motion.div>
             )}
           </AnimatePresence>
-        </CardContent>
-      </Card>
+      </CardContent>
+    </Card>
 
       <AnimatePresence>
         {selectedCoin && (
@@ -359,7 +376,5 @@ const RevenueGraph: React.FC<RevenueGraphProps> = ({ onCoinChange }) => {
       </AnimatePresence>
     </div>
   );
-};
-RevenueGraph.displayName = "RevenueGraph";
+} 
 
-export default RevenueGraph; 
